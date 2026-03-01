@@ -1,0 +1,22 @@
+[package]
+name = "portfolio-backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+actix-cors = "0.6"
+actix-multipart = "0.6"
+mongodb = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dotenv = "0.15"
+jsonwebtoken = "9"
+futures = "0.3"
+futures-util = "0.3"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.11", features = ["multipart", "json"] }
+md5 = "0.7"
+bytes = "1"
+base64 = "0.21"
