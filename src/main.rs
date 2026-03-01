@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{App, HttpServer, web};
 use dotenv::dotenv;
 use std::env;
@@ -19,7 +20,17 @@ async fn main() -> std::io::Result<()> {
     println!("🚀 Server running on port {}", port);
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin("http://localhost:5174")
+            .allowed_origin("http://localhost:5173")
+            .allowed_origin("http://127.0.0.1:5174")
+            .allowed_origin("http://127.0.0.1:5173")
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+            .allowed_headers(vec!["Content-Type", "Authorization"])
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
             .app_data(web::Data::new(db.clone()))
             .service(routes::auth::health_check)
             // Development endpoints (password utilities)

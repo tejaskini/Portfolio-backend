@@ -4,3 +4,4 @@ pub mod experience;
 pub mod projects;
 pub mod skills;
 pub mod password_utils;
+pub mod recent_addups;

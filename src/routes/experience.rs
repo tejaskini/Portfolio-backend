@@ -7,8 +7,8 @@ use crate::models::experience::{Experience, ExperienceRequest};
 use crate::error::MyError;
 use crate::utils::response::ApiResponse;
 use crate::middleware::auth_middleware::AuthenticatedAdmin;
+use crate::utils::collections::EXP_CL;
 
-const COLLECTION_NAME: &str = "experience";
 
 #[post("/experience")]
 pub async fn create_experience(
@@ -16,7 +16,7 @@ pub async fn create_experience(
     db: web::Data<mongodb::Database>,
     payload: web::Json<ExperienceRequest>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Experience>(COLLECTION_NAME);
+    let collection = db.collection::<Experience>(EXP_CL);
     let new_exp = Experience {
         id: None,
         company: payload.company.clone(),
@@ -31,12 +31,12 @@ pub async fn create_experience(
     let mut created_exp = new_exp;
     created_exp.id = result.inserted_id.as_object_id().map(|id| id.to_owned());
 
-    Ok(ApiResponse::created("Experience created", created_exp))
+    Ok(ApiResponse::created("Experience Inserted", created_exp))
 }
 
 #[get("/experience")]
 pub async fn get_experience(db: web::Data<mongodb::Database>) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Experience>(COLLECTION_NAME);
+    let collection = db.collection::<Experience>(EXP_CL);
     let mut cursor = collection.find(None, None).await?;
     let mut experiences = Vec::new();
 
@@ -54,17 +54,17 @@ pub async fn update_experience(
     id: web::Path<String>,
     payload: web::Json<ExperienceRequest>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Experience>(COLLECTION_NAME);
+    let collection = db.collection::<Experience>(EXP_CL);
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
         .map_err(|_| MyError::NotFound("Invalid experience ID".to_string()))?;
 
     let updated_exp = Experience {
         id: Some(obj_id),
-        company: payload.company.clone(),
-        role: payload.role.clone(),
-        description: payload.description.clone(),
-        start_date: payload.start_date.clone(),
-        end_date: payload.end_date.clone(),
+        company: payload.company.to_string(),
+        role: payload.role.to_string(),
+        description: payload.description.to_string(),
+        start_date: payload.start_date.to_string(),
+        end_date: Some(payload.end_date.as_ref().unwrap_or(&"".to_string()).to_string()),
         is_current: payload.is_current,
     };
 
@@ -81,7 +81,8 @@ pub async fn delete_experience(
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Experience>(COLLECTION_NAME);
+    let collection = db.collection::<Experience>(EXP_CL);
+
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
         .map_err(|_| MyError::NotFound("Invalid experience ID".to_string()))?;
 

@@ -17,7 +17,12 @@ pub enum MyError {
 
 impl fmt::Display for MyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            MyError::MongoError(err) => write!(f, "Database error: {}", err),
+            MyError::NotFound(msg) => write!(f, "Not found: {}", msg),
+            MyError::AuthError(msg) => write!(f, "Authentication error: {}", msg),
+            MyError::InternalError => write!(f, "Internal server error"),
+        }
     }
 }
 

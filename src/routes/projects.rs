@@ -8,8 +8,9 @@ use crate::models::project::{Project, CreateProjectRequest};
 use crate::error::MyError;
 use crate::utils::response::ApiResponse;
 use crate::middleware::auth_middleware::AuthenticatedAdmin;
+use crate::utils::collections::PROJECTS_CL;
+use actix_web::http::StatusCode;
 
-const COLLECTION_NAME: &str = "projects";
 
 #[post("/projects")]
 pub async fn create_project(
@@ -17,7 +18,7 @@ pub async fn create_project(
     db: web::Data<mongodb::Database>,
     payload: web::Json<CreateProjectRequest>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Project>(COLLECTION_NAME);
+    let collection = db.collection::<Project>(PROJECTS_CL);
     let new_project = Project {
         id: None,
         title: payload.title.to_string(),
@@ -39,7 +40,7 @@ pub async fn create_project(
 
 #[get("/projects")]
 pub async fn get_projects(db: web::Data<mongodb::Database>) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Project>(COLLECTION_NAME);
+    let collection = db.collection::<Project>(PROJECTS_CL);
     let mut cursor = collection.find(None, None).await?;
     let mut projects = Vec::new();
 
@@ -55,9 +56,24 @@ pub async fn update_project(
     _admin: AuthenticatedAdmin,
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
+    // user_type: web::Data<String>,
+    // is_permitted: web::Data<bool>,
+    // user_id: web::Data<String>,
     payload: web::Json<CreateProjectRequest>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Project>(COLLECTION_NAME);
+
+
+
+// if user_type == "web_user".to_string() && !*is_permitted {
+//     return Ok(ApiResponse::message_only(
+//         StatusCode::NOT_ACCEPTABLE,
+//         "permission_denied!",
+//         "You are not authorized to update this project"
+//     ));
+// }
+
+
+    let collection = db.collection::<Project>(PROJECTS_CL);
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
         .map_err(|_| MyError::NotFound("Invalid project ID".to_string()))?;
 
@@ -86,7 +102,7 @@ pub async fn delete_project(
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Project>(COLLECTION_NAME);
+    let collection = db.collection::<Project>(PROJECTS_CL);
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
         .map_err(|_| MyError::NotFound("Invalid project ID".to_string()))?;
 

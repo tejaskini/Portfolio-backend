@@ -10,7 +10,8 @@ pub struct Admin {
     pub email: String,
     pub phone: String,
     pub password_hash: String,
-     pub created_at: i64
+     pub created_at: i64,
+     pub admin_type: Option<ObjectId>
 }
 
 #[derive(Debug, Deserialize)]

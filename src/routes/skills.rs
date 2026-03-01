@@ -7,8 +7,8 @@ use crate::models::skill::{Skill, SkillRequest};
 use crate::error::MyError;
 use crate::utils::response::ApiResponse;
 use crate::middleware::auth_middleware::AuthenticatedAdmin;
+use crate::utils::collections::SKILLS;
 
-const COLLECTION_NAME: &str = "skills";
 
 #[post("/skills")]
 pub async fn create_skill(
@@ -16,7 +16,7 @@ pub async fn create_skill(
     db: web::Data<mongodb::Database>,
     payload: web::Json<SkillRequest>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Skill>(COLLECTION_NAME);
+    let collection = db.collection::<Skill>(SKILLS);
     let new_skill = Skill {
         id: None,
         name: payload.name.clone(),
@@ -33,7 +33,7 @@ pub async fn create_skill(
 
 #[get("/skills")]
 pub async fn get_skills(db: web::Data<mongodb::Database>) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Skill>(COLLECTION_NAME);
+    let collection = db.collection::<Skill>(SKILLS);
     let mut cursor = collection.find(None, None).await?;
     let mut skills = Vec::new();
 
@@ -51,7 +51,7 @@ pub async fn update_skill(
     id: web::Path<String>,
     payload: web::Json<SkillRequest>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Skill>(COLLECTION_NAME);
+    let collection = db.collection::<Skill>(SKILLS);
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
         .map_err(|_| MyError::NotFound("Invalid skill ID".to_string()))?;
 
@@ -75,7 +75,7 @@ pub async fn delete_skill(
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Skill>(COLLECTION_NAME);
+    let collection = db.collection::<Skill>(SKILLS);
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
         .map_err(|_| MyError::NotFound("Invalid skill ID".to_string()))?;
 
