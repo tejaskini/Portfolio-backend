@@ -8,13 +8,22 @@ use crate::error::MyError;
 use crate::utils::response::ApiResponse;
 use crate::utils::collections::PROJECTS_CL;
 use crate::models::auth::AuthenticatedUser;
+use crate::utils::access::check_permission;
+use crate::utils::constant::{READ, UPDATE, DELETE, CREATE};
 
-    #[post("/projects")]
+
+#[post("/projects")]
     pub async fn create_project(
         _admin: AuthenticatedUser,
         db: web::Data<mongodb::Database>,
         payload: web::Json<CreateProjectRequest>,
     ) -> Result<HttpResponse, MyError> {
+        
+         if !check_permission(&_admin, CREATE) {
+            println!("User does not have permission to create projects");
+            return Err(MyError::AuthError("Permission denied".to_string()));
+        }
+
         let collection = db.collection::<Project>(PROJECTS_CL);
         let new_project = Project {
             id: None,
@@ -60,14 +69,9 @@ pub async fn update_project(
 ) -> Result<HttpResponse, MyError> {
 
 
-
-// if user_type == "web_user".to_string() && !*is_permitted {
-//     return Ok(ApiResponse::message_only(
-//         StatusCode::NOT_ACCEPTABLE,
-//         "permission_denied!",
-//         "You are not authorized to update this project"
-//     ));
-// }
+   if !check_permission(&_admin, UPDATE) {
+            return Err(MyError::AuthError("Permission denied".to_string()));
+        }
 
 
     let collection = db.collection::<Project>(PROJECTS_CL);
@@ -99,6 +103,12 @@ pub async fn delete_project(
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, MyError> {
+
+
+     if !check_permission(&_admin, DELETE) {
+            return Err(MyError::AuthError("Permission denied".to_string()));
+        }
+
     let collection = db.collection::<Project>(PROJECTS_CL);
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
         .map_err(|_| MyError::NotFound("Invalid project ID".to_string()))?;

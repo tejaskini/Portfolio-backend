@@ -6,7 +6,8 @@ use futures_util::stream::TryStreamExt;
 use crate::models::{auth::AuthenticatedUser, education::{Education, EducationRequest}};
 use crate::utils::response::ApiResponse;
 use crate::utils::collections::EDU_CL;
-
+use crate::utils::access::check_permission;
+use crate::utils::constant::{CREATE, UPDATE, DELETE};
 
 
 #[post("/education")]
@@ -17,6 +18,10 @@ pub async fn create_education(
 ) -> Result<HttpResponse, actix_web::Error> {
     let collection = db.collection::<Education>(EDU_CL);
 
+    
+   if !check_permission(&_admin, CREATE) {
+                return Ok(ApiResponse::message_only(actix_web::http::StatusCode::FORBIDDEN, "error", "Permission denied"));
+        }
 
 
     let mut new_edu = Education {
@@ -60,6 +65,15 @@ pub async fn update_education(
     path: web::Path<String>,
     payload: web::Json<EducationRequest>,
 ) -> Result<HttpResponse, actix_web::Error> {
+
+
+      
+   if !check_permission(&_admin, UPDATE) {
+            return 
+                Ok(ApiResponse::message_only(actix_web::http::StatusCode::FORBIDDEN, "error", "Permission denied"));
+        }
+        
+    
     let obj_id = ObjectId::parse_str(path.into_inner()).map_err(actix_web::error::ErrorBadRequest)?;
     let collection = db.collection::<Education>(EDU_CL);
     
@@ -93,6 +107,14 @@ pub async fn delete_education(
     db: web::Data<Database>,
     path: web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error> {
+
+   
+   if !check_permission(&_admin, DELETE) {
+            return 
+                Ok(ApiResponse::message_only(actix_web::http::StatusCode::FORBIDDEN, "error", "Permission denied"));
+        }
+
+
     let obj_id = ObjectId::parse_str(path.into_inner()).map_err(actix_web::error::ErrorBadRequest)?;
     let result = db.collection::<Education>(EDU_CL).delete_one(doc! { "_id": obj_id }, None).await
         .map_err(actix_web::error::ErrorInternalServerError)?;

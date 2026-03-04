@@ -8,6 +8,8 @@ use crate::error::MyError;
 use crate::utils::response::ApiResponse;
 use crate::models::auth::AuthenticatedUser;
 use crate::utils::collections::EXP_CL;
+use crate::utils::access::check_permission;
+use crate::utils::constant::{CREATE, UPDATE, DELETE};
 
 
 #[post("/experience")]
@@ -16,6 +18,13 @@ pub async fn create_experience(
     db: web::Data<mongodb::Database>,
     payload: web::Json<ExperienceRequest>,
 ) -> Result<HttpResponse, MyError> {
+
+       if !check_permission(&_admin, CREATE) {
+            return 
+                Ok(ApiResponse::message_only(actix_web::http::StatusCode::FORBIDDEN, "error", "You don't have permission to add experience"));
+        }
+
+
     let collection = db.collection::<Experience>(EXP_CL);
     let new_exp = Experience {
         id: None,
@@ -54,6 +63,14 @@ pub async fn update_experience(
     id: web::Path<String>,
     payload: web::Json<ExperienceRequest>,
 ) -> Result<HttpResponse, MyError> {
+
+    
+       if !check_permission(&_admin, UPDATE) {
+            return 
+                Ok(ApiResponse::message_only(actix_web::http::StatusCode::FORBIDDEN, "error", "You don't have permission to update experience"));
+        }
+
+
     let collection = db.collection::<Experience>(EXP_CL);
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
         .map_err(|_| MyError::NotFound("Invalid experience ID".to_string()))?;
@@ -81,6 +98,14 @@ pub async fn delete_experience(
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, MyError> {
+
+    
+       if !check_permission(&_admin, DELETE) {
+            return 
+                Ok(ApiResponse::message_only(actix_web::http::StatusCode::FORBIDDEN, "error", "You Don't have Permission to delete experience!"));
+        }
+
+
     let collection = db.collection::<Experience>(EXP_CL);
 
     let obj_id = mongodb::bson::oid::ObjectId::parse_str(id.as_str())
