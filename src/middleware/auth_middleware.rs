@@ -73,12 +73,10 @@ impl FromRequest for AuthenticatedUser {
             )
             .map_err(|_| actix_web::error::ErrorUnauthorized("Invalid token"))?;
 
-        println!("Decoded JWT Claims: {:?}", decoded.claims);
 
             let user_id = ObjectId::parse_str(&decoded.claims.user_id)
                 .map_err(|_| actix_web::error::ErrorUnauthorized("Invalid user id"))?;
 
-             println!("Parsed User ID: {:?}", user_id);
 
             // 🔹 Fetch user
            let user_coll = db.collection::<Admin>("admins");
@@ -92,7 +90,6 @@ impl FromRequest for AuthenticatedUser {
                 .map_err(|_| actix_web::error::ErrorUnauthorized("User not found"))?
                 .ok_or_else(|| actix_web::error::ErrorUnauthorized("User not found"))?;
 
-            println!("Fetched User: {:?}", user);
 
             // Fetch role
             let role_coll = db.collection::<Role>("roles");
