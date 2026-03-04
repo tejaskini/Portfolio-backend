@@ -11,6 +11,8 @@ pub struct Education {
     pub field_of_study: String,
     pub start_year: i32,
     pub end_year: Option<i32>,
+    pub location: Option<String>,
+    pub score: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -20,4 +22,6 @@ pub struct EducationRequest {
     pub field_of_study: String,
     pub start_year: i32,
     pub end_year: Option<i32>,
+    pub location: Option<String>,
+    pub score: Option<String>,
 }

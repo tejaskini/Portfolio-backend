@@ -9,6 +9,7 @@ pub struct Skill {
     pub name: String,
     pub proficiency: String, // Beginner, Intermediate, Advanced, Expert
     pub category: String, // Frontend, Backend, DevOps, etc.
+    pub month_of_experience: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -16,4 +17,5 @@ pub struct SkillRequest {
     pub name: String,
     pub proficiency: String,
     pub category: String,
+    pub month_of_experience: Option<u32>,
 }

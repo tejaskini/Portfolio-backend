@@ -10,8 +10,14 @@ pub struct Admin {
     pub email: String,
     pub phone: String,
     pub password_hash: String,
-     pub created_at: i64,
-     pub admin_type: Option<ObjectId>
+    pub created_at: i64,
+    pub role_id    : ObjectId,
+    #[serde(default)]
+    pub custom_permissions: Vec<String>,
+    #[serde(default)]   
+    pub denied_permissions: Vec<String>, 
+
+
 }
 
 #[derive(Debug, Deserialize)]
@@ -26,6 +32,7 @@ pub struct RegisterRequest {
     pub email: String,
     pub phone: String,
     pub password: String,
+    pub role: String, // "admin" or "user" or "superadmin"
    
 }
 

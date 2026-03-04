@@ -14,25 +14,6 @@ pub async fn health_check() -> HttpResponse {
     HttpResponse::Ok().json(serde_json::json!({ "status": "ok" }))
 }
 
-// fetch admin rules for new admin registration
-pub async fn fetch_admin_rules(db: &mongodb::Database) -> Result<ObjectId, MyError> {
-    let collection = db.collection::<Document>("permissions");
-
-    let filter = doc! {
-         "admin_type": "web_user" ,
-         "is_admin": false
-        };
-
-    let doc = collection
-        .find_one(filter, None)
-        .await?
-        .ok_or_else(|| MyError::NotFound("No admin rules found".to_string()))?;
-
-    let id = doc.get_object_id("_id")
-        .map_err(|_| MyError::NotFound("Admin rules ID not found".to_string()))?;
-
-    Ok(id)
-}
 
 // #[post("/login")]
 // pub async fn login(
@@ -68,6 +49,58 @@ pub async fn fetch_admin_rules(db: &mongodb::Database) -> Result<ObjectId, MyErr
 // }
 
 
+// it return the user_type and permissions for the user based on the role_id
+pub async fn fetch_user_permissions(
+    db: &mongodb::Database,
+    role_id: &ObjectId,
+) -> Result<(String, Vec<String>), MyError> {
+
+    let perm_coll = db.collection::<Document>("roles");
+
+    let permission_doc = perm_coll
+        .find_one(doc! { "_id": role_id }, None)
+        .await?
+        .ok_or_else(|| MyError::AuthError("Permission configuration missing".to_string()))?;
+
+    // Safe type extraction
+    let user_type = permission_doc
+        .get_str("type")
+        .unwrap_or("web_user")
+        .to_string();
+
+    let user_permissions = match permission_doc.get_array("permissions") {
+        Ok(arr) => arr
+            .iter()
+            .filter_map(|bson| bson.as_str().map(|s| s.to_string()))
+            .collect(),
+        Err(_) => vec![],
+    };
+
+
+    Ok((user_type, user_permissions))
+}
+
+pub async fn new_reg_user(db: &mongodb::Database, payload: String) -> Result<(ObjectId), MyError> {
+    let collection = db.collection::<Document>("roles");
+    
+
+    let filter = doc! { "type": payload };
+    let role_doc = collection
+        .find_one(filter, None)
+        .await?
+        .ok_or_else(|| MyError::AuthError("Role not found".to_string()))?;
+    
+    let role_id = role_doc.get_object_id("_id").unwrap();
+
+    Ok(role_id.to_owned())
+}
+
+
+
+
+
+
+
 #[post("/login")]
 pub async fn login(
     db: web::Data<mongodb::Database>,
@@ -75,7 +108,6 @@ pub async fn login(
 ) -> Result<HttpResponse, MyError> {
     let admin_coll = db.collection::<Admin>(ADMIN_CL);
     // Note: We use a generic Document collection to handle dynamic permission fields
-    let perm_coll = db.collection::<mongodb::bson::Document>("permissions");
 
     // 1. Find user in DB
     let admin = admin_coll
@@ -94,29 +126,14 @@ pub async fn login(
         return Err(MyError::AuthError("Invalid credentials".to_string()));
     }
 
+    let role_id = admin.role_id;
 
-    let user_id = admin.id.ok_or_else(|| MyError::NotFound("Admin ID not found".to_string()))?;
-
-    // 3. Fetch permissions using the admin_type ObjectId
-    // Assuming admin.admin_type is a mongodb::bson::oid::ObjectId
-    let permission_doc = perm_coll
-        .find_one(doc! { "_id": &admin.admin_type }, None)
-        .await?
-        .ok_or_else(|| MyError::AuthError("Permission configuration missing".to_string()))?;
-
-    // Extract user_type (e.g., "super_admin") and is_admin boolean
-    let user_type = permission_doc
-        .get_str("admin_type")
-        .unwrap_or("web_user")
-        .to_string();
-
-    let is_admin = permission_doc
-        .get_bool("is_admin")
-        .unwrap_or(false);
+    // 3. Fetch permissions based on role_id
+    let (user_type, user_permissions) = fetch_user_permissions(&db, &role_id).await?;
 
     // 4. Generate Token with new claims
     // Update your create_jwt signature to: create_jwt(username, user_type, is_admin)
-    let token = create_jwt(&admin.username,&admin.id.as_ref().unwrap().to_hex(),&user_type, is_admin)?;
+    let token = create_jwt(&admin.username,&admin.id.as_ref().unwrap().to_hex(),&user_type, &user_permissions)?;
 
     Ok(HttpResponse::Ok().json(serde_json::json!({
          "token": token,
@@ -151,8 +168,7 @@ pub async fn register(
     let password_hash = general_purpose::STANDARD.encode(payload.password.as_bytes());
 
     let now = chrono::Utc::now().timestamp_millis();
-
-    let admin_rules_id = fetch_admin_rules(&db).await?;
+    let role_id = new_reg_user(&db, payload.role.clone()).await?;
 
     let new_admin = Admin {
         id: None,
@@ -161,13 +177,14 @@ pub async fn register(
         phone: payload.phone.to_string(),
         password_hash,
         created_at: now,
-        admin_type: Some(admin_rules_id)
+        role_id: role_id,
+        custom_permissions: vec![],
+        denied_permissions: vec![]
     };
-
     // 2. Save to DB
     collection.insert_one(&new_admin, None).await?;
     Ok(HttpResponse::Created().json(serde_json::json!({ 
-        "message": "Admin registered successfully",
+        "message": "User registered successfully",
         "username": payload.username
     })))
 }

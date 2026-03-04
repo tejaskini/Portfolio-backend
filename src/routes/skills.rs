@@ -2,33 +2,35 @@
 use actix_web::{get, post, put, delete, web, HttpResponse};
 use futures_util::stream::TryStreamExt;
 use mongodb::bson::doc;
-
+use crate::models::auth::AuthenticatedUser;
 use crate::models::skill::{Skill, SkillRequest};
 use crate::error::MyError;
 use crate::utils::response::ApiResponse;
-use crate::middleware::auth_middleware::AuthenticatedAdmin;
 use crate::utils::collections::SKILLS;
 
 
 #[post("/skills")]
 pub async fn create_skill(
-    _admin: AuthenticatedAdmin,
+    _admin: AuthenticatedUser,
     db: web::Data<mongodb::Database>,
     payload: web::Json<SkillRequest>,
 ) -> Result<HttpResponse, MyError> {
     let collection = db.collection::<Skill>(SKILLS);
     let new_skill = Skill {
         id: None,
-        name: payload.name.clone(),
-        proficiency: payload.proficiency.clone(),
-        category: payload.category.clone(),
+        name: payload.name.to_string(),
+        proficiency: payload.proficiency.to_string(),
+        category: payload.category.to_string(),
+        month_of_experience: payload.month_of_experience
     };
 
     let result = collection.insert_one(&new_skill, None).await?;
     let mut created_skill = new_skill;
     created_skill.id = result.inserted_id.as_object_id().map(|id| id.to_owned());
 
-    Ok(ApiResponse::created("Skill created", created_skill))
+    // Ok(ApiResponse::created("Skill created", created_skill))
+        Ok(ApiResponse::message_only(actix_web::http::StatusCode::OK, "success", "Skill Inserted"))
+
 }
 
 #[get("/skills")]
@@ -46,7 +48,7 @@ pub async fn get_skills(db: web::Data<mongodb::Database>) -> Result<HttpResponse
 
 #[put("/skills/{id}")]
 pub async fn update_skill(
-    _admin: AuthenticatedAdmin,
+    _admin: AuthenticatedUser,
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
     payload: web::Json<SkillRequest>,
@@ -57,21 +59,22 @@ pub async fn update_skill(
 
     let updated_skill = Skill {
         id: Some(obj_id),
-        name: payload.name.clone(),
-        proficiency: payload.proficiency.clone(),
-        category: payload.category.clone(),
+        name: payload.name.to_string(),
+        proficiency: payload.proficiency.to_string(),
+        category: payload.category.to_string(),
+        month_of_experience: payload.month_of_experience
     };
 
     collection
         .replace_one(doc! { "_id": obj_id }, &updated_skill, None)
         .await?;
 
-    Ok(ApiResponse::ok("Skill updated", updated_skill))
+        Ok(ApiResponse::message_only(actix_web::http::StatusCode::OK, "success", "Skill Updated"))
 }
 
 #[delete("/skills/{id}")]
 pub async fn delete_skill(
-    _admin: AuthenticatedAdmin,
+    _admin: AuthenticatedUser,
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, MyError> {
@@ -81,5 +84,5 @@ pub async fn delete_skill(
 
     collection.delete_one(doc! { "_id": obj_id }, None).await?;
 
-    Ok(HttpResponse::Ok().json(serde_json::json!({ "message": "Skill deleted" })))
+    Ok(ApiResponse::message_only(actix_web::http::StatusCode::OK, "success", "Skill deleted"))
 }

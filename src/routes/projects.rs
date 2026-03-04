@@ -3,40 +3,37 @@ use actix_web::{get, post, put, delete, web, HttpResponse};
 use futures_util::stream::TryStreamExt;
 use mongodb::bson::doc;
 use chrono::Utc;
-
 use crate::models::project::{Project, CreateProjectRequest};
 use crate::error::MyError;
 use crate::utils::response::ApiResponse;
-use crate::middleware::auth_middleware::AuthenticatedAdmin;
 use crate::utils::collections::PROJECTS_CL;
-use actix_web::http::StatusCode;
+use crate::models::auth::AuthenticatedUser;
 
+    #[post("/projects")]
+    pub async fn create_project(
+        _admin: AuthenticatedUser,
+        db: web::Data<mongodb::Database>,
+        payload: web::Json<CreateProjectRequest>,
+    ) -> Result<HttpResponse, MyError> {
+        let collection = db.collection::<Project>(PROJECTS_CL);
+        let new_project = Project {
+            id: None,
+            title: payload.title.to_string(),
+            description: payload.description.to_string(),
+            tech_stack: payload.tech_stack.to_vec(),
+            image_url: payload.image_url.to_string(),
+            live_link: Some(payload.live_link.as_ref().unwrap_or(&"".to_string()).to_string()),
+            repo_link: Some(payload.repo_link.as_ref().unwrap_or(&"".to_string()).to_string()),
+            created_at: Utc::now().timestamp_millis(),
+            updated_at: Utc::now().timestamp_millis(),
+        };
 
-#[post("/projects")]
-pub async fn create_project(
-    _admin: AuthenticatedAdmin,
-    db: web::Data<mongodb::Database>,
-    payload: web::Json<CreateProjectRequest>,
-) -> Result<HttpResponse, MyError> {
-    let collection = db.collection::<Project>(PROJECTS_CL);
-    let new_project = Project {
-        id: None,
-        title: payload.title.to_string(),
-        description: payload.description.to_string(),
-        tech_stack: payload.tech_stack.to_vec(),
-        image_url: payload.image_url.to_string(),
-        live_link: Some(payload.live_link.as_ref().unwrap_or(&"".to_string()).to_string()),
-        repo_link: Some(payload.repo_link.as_ref().unwrap_or(&"".to_string()).to_string()),
-        created_at: Utc::now().timestamp_millis(),
-        updated_at: Utc::now().timestamp_millis(),
-    };
+        let result = collection.insert_one(&new_project, None).await?;
+        let mut created_project = new_project;
+        created_project.id = result.inserted_id.as_object_id().map(|id| id.to_owned());
 
-    let result = collection.insert_one(&new_project, None).await?;
-    let mut created_project = new_project;
-    created_project.id = result.inserted_id.as_object_id().map(|id| id.to_owned());
-
-    Ok(ApiResponse::created("Project inserted", created_project))
-}
+        Ok(ApiResponse::created("Project inserted", created_project))
+    }
 
 #[get("/projects")]
 pub async fn get_projects(db: web::Data<mongodb::Database>) -> Result<HttpResponse, MyError> {
@@ -53,7 +50,7 @@ pub async fn get_projects(db: web::Data<mongodb::Database>) -> Result<HttpRespon
 
 #[put("/projects/{id}")]
 pub async fn update_project(
-    _admin: AuthenticatedAdmin,
+    _admin: AuthenticatedUser,
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
     // user_type: web::Data<String>,
@@ -98,7 +95,7 @@ pub async fn update_project(
 
 #[delete("/projects/{id}")]
 pub async fn delete_project(
-    _admin: AuthenticatedAdmin,
+    _admin: AuthenticatedUser,
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, MyError> {

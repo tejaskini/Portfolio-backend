@@ -6,13 +6,13 @@ use mongodb::bson::doc;
 use crate::models::experience::{Experience, ExperienceRequest};
 use crate::error::MyError;
 use crate::utils::response::ApiResponse;
-use crate::middleware::auth_middleware::AuthenticatedAdmin;
+use crate::models::auth::AuthenticatedUser;
 use crate::utils::collections::EXP_CL;
 
 
 #[post("/experience")]
 pub async fn create_experience(
-    _admin: AuthenticatedAdmin,
+    _admin: AuthenticatedUser,
     db: web::Data<mongodb::Database>,
     payload: web::Json<ExperienceRequest>,
 ) -> Result<HttpResponse, MyError> {
@@ -49,7 +49,7 @@ pub async fn get_experience(db: web::Data<mongodb::Database>) -> Result<HttpResp
 
 #[put("/experience/{id}")]
 pub async fn update_experience(
-    _admin: AuthenticatedAdmin,
+    _admin: AuthenticatedUser,
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
     payload: web::Json<ExperienceRequest>,
@@ -77,7 +77,7 @@ pub async fn update_experience(
 
 #[delete("/experience/{id}")]
 pub async fn delete_experience(
-    _admin: AuthenticatedAdmin,
+    _admin: AuthenticatedUser,
     db: web::Data<mongodb::Database>,
     id: web::Path<String>,
 ) -> Result<HttpResponse, MyError> {
