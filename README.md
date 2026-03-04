@@ -495,6 +495,216 @@ cargo clippy
 }
 ```
 
+🔐 Role-Based Access Control (RBAC) – Access Management
+
+This project implements a Role-Based Access Control (RBAC) system using:
+
+🦀 Rust
+
+⚡ Actix Web
+
+🍃 MongoDB
+
+🔑 JWT Authentication
+
+The system supports Admin Users and Web Users with dynamic permission-based access control.
+
+📌 Table of Contents
+
+Architecture Overview
+
+Role Structure
+
+JWT Structure
+
+Permission Flow
+
+Access Control Logic
+
+Web User Access Management
+
+Example Protected Route
+
+Database Schema
+
+Security Notes
+
+🏗️ Architecture Overview
+
+The system follows Role-Based Access Control (RBAC) principles:
+
+User logs in
+
+Role is fetched from database
+
+Permissions are extracted
+
+JWT is generated with permissions
+
+Each API checks required permission before execution
+
+👥 User Types
+Type	Description
+super_admin	Full access to all resources
+admin	Access based on assigned permissions
+web_user	Public-facing user with restricted access
+🗄️ Roles Collection (MongoDB)
+
+Collection: roles
+
+Example Role Document
+{
+  "_id": ObjectId("65fa380a8d974209406ce5d3c"),
+  "type": "admin",
+  "permissions": [
+    "user:create",
+    "user:update",
+    "user:delete",
+    "project:create",
+    "project:update",
+    "project:delete"
+  ]
+}
+Fields
+
+type → Defines the role type
+
+permissions → List of allowed actions
+
+🔑 JWT Claims Structure
+
+After successful login, JWT contains:
+
+Claims {
+    sub: "admin",
+    exp: 1772711162,
+    admin_type: "super_admin",
+    user_id: "69a380a8d974209406ce5d3c",
+    permissions: [
+        "user:create",
+        "project:create"
+    ]
+}
+Why Store Permissions in JWT?
+
+No database call on every request
+
+Faster authorization
+
+Stateless authentication
+
+🔄 Permission Flow
+Step 1: Login
+
+Validate credentials
+
+Fetch role from roles collection
+
+Extract permissions
+
+Generate JWT including permissions
+
+Step 2: Middleware Authentication
+
+Custom extractor:
+
+AuthenticatedUser
+
+This:
+
+Validates JWT
+
+Extracts claims
+
+Attaches user info to request
+
+Step 3: Permission Check
+pub async fn check_permission(
+    user: &AuthenticatedUser,
+    required_permission: &str,
+) -> bool {
+    user.permissions.contains(&required_permission.to_string())
+}
+🔐 Protecting Routes
+Example: Create Project (Admin Only)
+#[post("/projects")]
+pub async fn create_project(
+    admin: AuthenticatedUser,
+    db: web::Data<mongodb::Database>,
+    payload: web::Json<CreateProjectRequest>,
+) -> Result<HttpResponse, MyError> {
+
+    if !check_permission(&admin, "project:create").await {
+        return Err(MyError::AuthError("Permission denied".to_string()));
+    }
+
+    // Continue logic...
+}
+🌐 Managing Access for Web Users
+
+For public website users:
+
+Option 1: Allow Public Read Access
+
+Do not require AuthenticatedUser extractor.
+
+#[get("/projects")]
+pub async fn get_projects(db: web::Data<mongodb::Database>) {
+    // Public access
+}
+Option 2: Restricted Web User Permissions
+
+Create a role:
+
+{
+  "type": "web_user",
+  "permissions": [
+    "project:view"
+  ]
+}
+
+Then check permission normally using check_permission().
+
+🗂️ Database Schema Overview
+Admin Collection
+{
+  "_id": ObjectId,
+  "username": "admin",
+  "password": "hashed_password",
+  "role_id": ObjectId
+}
+Roles Collection
+{
+  "_id": ObjectId,
+  "type": "admin",
+  "permissions": []
+}
+Projects Collection
+{
+  "_id": ObjectId,
+  "title": "Portfolio Website",
+  "description": "Built with Rust and React",
+  "tech_stack": ["Rust", "MongoDB", "React"],
+  "image_url": "https://...",
+  "live_link": "https://...",
+  "repo_link": "https://...",
+  "created_at": 1700000000000,
+  "updated_at": 1700000000000
+}
+🛡️ Security Best Practices
+
+Always hash passwords (bcrypt or argon2)
+
+Never trust frontend permissions
+
+Always verify permissions in backend
+
+Use short JWT expiry
+
+Store JWT secret securely (env variable)
+
+Validate ObjectId properly before DB queries
+
 ## 🔐 Security Notes
 
 ⚠️ **Important for Production:**
