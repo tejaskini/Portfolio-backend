@@ -84,7 +84,7 @@ pub async fn new_reg_user(db: &mongodb::Database, payload: String) -> Result<(Ob
     let collection = db.collection::<Document>("roles");
     
 
-    let filter = doc! { "type": payload };
+    let filter = doc! { "user_type": payload };
     let role_doc = collection
         .find_one(filter, None)
         .await?
