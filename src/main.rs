@@ -15,6 +15,8 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
     let db: mongodb::Database = config::db::connect_db().await;
+        println!("✅ MongoDB connected successfully");
+
     let port = env::var("PORT").unwrap_or("8080".to_string());
 
     println!("🚀 Server running on port {}", port);

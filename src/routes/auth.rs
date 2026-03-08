@@ -106,6 +106,8 @@ pub async fn login(
     db: web::Data<mongodb::Database>,
     payload: web::Json<LoginRequest>,
 ) -> Result<HttpResponse, MyError> {
+
+    println!("Login attempt for username: {}", payload.username);
     let admin_coll = db.collection::<Admin>(ADMIN_CL);
     // Note: We use a generic Document collection to handle dynamic permission fields
 
