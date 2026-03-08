@@ -8,6 +8,7 @@ use crate::error::MyError;
 use crate::utils::response::ApiResponse;
 use crate::utils::collections::SKILLS;
 use crate::utils::access::check_permission;
+use mongodb::options::FindOptions;
 use crate::utils::constant::{CREATE, UPDATE, DELETE};
 
 
@@ -46,7 +47,13 @@ pub async fn create_skill(
 #[get("/skills")]
 pub async fn get_skills(db: web::Data<mongodb::Database>) -> Result<HttpResponse, MyError> {
     let collection = db.collection::<Skill>(SKILLS);
-    let mut cursor = collection.find(None, None).await?;
+
+     // Sort by latest first
+    let find_options = FindOptions::builder()
+        .sort(doc! { "_id": -1 })
+        .build();
+
+    let mut cursor = collection.find(None, find_options).await?;
     let mut skills = Vec::new();
 
     while let Some(skill) = cursor.try_next().await? {

@@ -9,6 +9,7 @@ use crate::utils::response::ApiResponse;
 use crate::utils::collections::PROJECTS_CL;
 use crate::models::auth::AuthenticatedUser;
 use crate::utils::access::check_permission;
+use mongodb::options::FindOptions;
 use crate::utils::constant::{READ, UPDATE, DELETE, CREATE};
 
 
@@ -47,7 +48,12 @@ use crate::utils::constant::{READ, UPDATE, DELETE, CREATE};
 #[get("/projects")]
 pub async fn get_projects(db: web::Data<mongodb::Database>) -> Result<HttpResponse, MyError> {
     let collection = db.collection::<Project>(PROJECTS_CL);
-    let mut cursor = collection.find(None, None).await?;
+
+        let find_options = FindOptions::builder()
+        .sort(doc! { "_id": -1 })
+        .build();
+    
+    let mut cursor = collection.find(None, find_options).await?;
     let mut projects = Vec::new();
 
     while let Some(project) = cursor.try_next().await? {

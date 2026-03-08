@@ -2,7 +2,7 @@
 use actix_web::{get, post, put, delete, web, HttpResponse};
 use futures_util::stream::TryStreamExt;
 use mongodb::bson::doc;
-
+use mongodb::options::FindOptions;
 use crate::models::experience::{Experience, ExperienceRequest};
 use crate::error::MyError;
 use crate::utils::response::ApiResponse;
@@ -43,10 +43,21 @@ pub async fn create_experience(
     Ok(ApiResponse::created("Experience Inserted", created_exp))
 }
 
+
 #[get("/experience")]
-pub async fn get_experience(db: web::Data<mongodb::Database>) -> Result<HttpResponse, MyError> {
+pub async fn get_experience(
+    db: web::Data<mongodb::Database>,
+) -> Result<HttpResponse, MyError> {
+
     let collection = db.collection::<Experience>(EXP_CL);
-    let mut cursor = collection.find(None, None).await?;
+
+    // Sort by latest first
+    let find_options = FindOptions::builder()
+        .sort(doc! { "_id": -1 })
+        .build();
+
+    let mut cursor = collection.find(None, find_options).await?;
+
     let mut experiences = Vec::new();
 
     while let Some(exp) = cursor.try_next().await? {
